@@ -56,7 +56,7 @@ async def create_host(
         name=host_create.name,
         hostname=host_create.hostname,
         api_key_hash=api_key_hash,
-        metadata=host_create.metadata
+        host_metadata=host_create.metadata
     )
 
     db.add(host)
@@ -118,7 +118,7 @@ async def update_host(
     if host_update.status is not None:
         host.status = host_update.status
     if host_update.metadata is not None:
-        host.metadata = host_update.metadata
+        host.host_metadata = host_update.metadata
 
     await db.commit()
     await db.refresh(host)

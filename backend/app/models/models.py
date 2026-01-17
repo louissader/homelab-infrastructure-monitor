@@ -6,9 +6,10 @@ from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 from sqlalchemy import Column, String, DateTime, Enum, Text, ForeignKey, Index, BigInteger, Integer
-from sqlalchemy.dialects.postgresql import UUID, JSONB, TIMESTAMPTZ
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.types import TIMESTAMP
 import enum
 
 from app.db.base import Base
@@ -39,10 +40,10 @@ class Host(Base):
     hostname = Column(String(255), nullable=False)
     api_key_hash = Column(String(255), nullable=False)
     status = Column(Enum(HostStatus), default=HostStatus.UNKNOWN, nullable=False)
-    last_seen = Column(TIMESTAMPTZ, nullable=True)
-    created_at = Column(TIMESTAMPTZ, server_default=func.now(), nullable=False)
-    updated_at = Column(TIMESTAMPTZ, server_default=func.now(), onupdate=func.now())
-    metadata = Column(JSONB, default={})
+    last_seen = Column(TIMESTAMP(timezone=True), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    host_metadata = Column(JSONB, default={})
 
     # Relationships
     metrics = relationship("Metric", back_populates="host", cascade="all, delete-orphan")
@@ -65,7 +66,7 @@ class Metric(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     host_id = Column(UUID(as_uuid=True), ForeignKey("hosts.id", ondelete="CASCADE"), nullable=False)
-    timestamp = Column(TIMESTAMPTZ, nullable=False, index=True)
+    timestamp = Column(TIMESTAMP(timezone=True), nullable=False, index=True)
     metric_type = Column(String(50), nullable=False, index=True)  # cpu, memory, disk, network, etc.
     metric_data = Column(JSONB, nullable=False)
 
@@ -98,8 +99,8 @@ class AlertRule(Base):
     duration_seconds = Column(Integer, default=0)  # How long condition must be true
     enabled = Column(String(10), default="true")
     notification_channels = Column(JSONB, default=[])  # List of notification channels
-    created_at = Column(TIMESTAMPTZ, server_default=func.now())
-    updated_at = Column(TIMESTAMPTZ, server_default=func.now(), onupdate=func.now())
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
     alerts = relationship("Alert", back_populates="rule")
@@ -118,11 +119,11 @@ class Alert(Base):
     rule_id = Column(UUID(as_uuid=True), ForeignKey("alert_rules.id", ondelete="SET NULL"), nullable=True)
     severity = Column(Enum(AlertSeverity), nullable=False)
     message = Column(Text, nullable=False)
-    triggered_at = Column(TIMESTAMPTZ, nullable=False, server_default=func.now())
-    resolved_at = Column(TIMESTAMPTZ, nullable=True)
+    triggered_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    resolved_at = Column(TIMESTAMP(timezone=True), nullable=True)
     acknowledged_by = Column(String(255), nullable=True)
-    acknowledged_at = Column(TIMESTAMPTZ, nullable=True)
-    metadata = Column(JSONB, default={})
+    acknowledged_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    alert_metadata = Column(JSONB, default={})
 
     # Relationships
     host = relationship("Host", back_populates="alerts")
@@ -149,11 +150,11 @@ class ApiKey(Base):
     key_hash = Column(String(255), nullable=False, unique=True)
     key_type = Column(String(50), nullable=False)  # agent, user, admin
     host_id = Column(UUID(as_uuid=True), ForeignKey("hosts.id", ondelete="CASCADE"), nullable=True)
-    created_at = Column(TIMESTAMPTZ, server_default=func.now())
-    last_used_at = Column(TIMESTAMPTZ, nullable=True)
-    expires_at = Column(TIMESTAMPTZ, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    last_used_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
     revoked = Column(String(10), default="false")
-    metadata = Column(JSONB, default={})
+    key_metadata = Column(JSONB, default={})
 
     # Indexes
     __table_args__ = (

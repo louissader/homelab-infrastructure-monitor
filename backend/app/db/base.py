@@ -23,6 +23,9 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
+# Alias for compatibility
+async_session_factory = AsyncSessionLocal
+
 # Base class for models
 Base = declarative_base()
 

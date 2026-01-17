@@ -34,15 +34,18 @@ class HostUpdate(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 
-class Host(HostBase):
+class Host(BaseModel):
     """Schema for host response."""
     id: UUID
+    name: str
+    hostname: str
     status: HostStatus
     last_seen: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict, alias="host_metadata")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class HostWithKey(Host):
@@ -107,7 +110,7 @@ class AlertRuleBase(BaseModel):
     condition: Dict[str, Any]
     severity: AlertSeverity
     duration_seconds: int = Field(default=0, ge=0)
-    enabled: bool = True
+    enabled: str = "true"  # String to match DB model
     notification_channels: List[str] = Field(default_factory=list)
 
 
@@ -123,7 +126,7 @@ class AlertRuleUpdate(BaseModel):
     condition: Optional[Dict[str, Any]] = None
     severity: Optional[AlertSeverity] = None
     duration_seconds: Optional[int] = Field(None, ge=0)
-    enabled: Optional[bool] = None
+    enabled: Optional[str] = None  # String to match DB model
     notification_channels: Optional[List[str]] = None
 
 
@@ -159,9 +162,9 @@ class Alert(AlertBase):
     resolved_at: Optional[datetime] = None
     acknowledged_by: Optional[str] = None
     acknowledged_at: Optional[datetime] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict, alias="alert_metadata")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class AlertAcknowledge(BaseModel):

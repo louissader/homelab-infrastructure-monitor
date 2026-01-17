@@ -8,11 +8,14 @@ from sqlalchemy import select, and_, func
 from typing import List
 from datetime import datetime, timedelta
 import logging
+import asyncio
 
 from app.db.base import get_db
 from app.models.models import Metric, Host
 from app.schemas.schemas import MetricPayload, Metric as MetricSchema, MetricQuery
 from app.core.auth import get_current_host
+from app.api.v1.endpoints.websocket import broadcast_metric
+from app.core.alert_engine import evaluate_and_alert
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -83,6 +86,24 @@ async def ingest_metrics(
             db.add(health_metric)
 
         await db.commit()
+
+        # Broadcast to WebSocket clients
+        await broadcast_metric(str(current_host.id), {
+            "timestamp": payload.timestamp.isoformat(),
+            "cpu": payload.metrics.get("cpu"),
+            "memory": payload.metrics.get("memory"),
+            "disk": payload.metrics.get("disk_io"),
+            "network": payload.metrics.get("network"),
+            "docker": payload.containers,
+            "services": payload.health_checks
+        })
+
+        # Evaluate metrics against alert rules (non-blocking)
+        for metric_type, metric_data in metric_types.items():
+            if metric_data:
+                asyncio.create_task(
+                    evaluate_and_alert(current_host.id, metric_type, metric_data)
+                )
 
         logger.info(f"Metrics ingested successfully for host {current_host.name}")
 
