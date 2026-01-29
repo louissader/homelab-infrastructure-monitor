@@ -7,11 +7,13 @@ import {
   Activity,
   Settings,
   HardDrive,
+  Box,
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Hosts', href: '/hosts', icon: Server },
+  { name: 'Kubernetes', href: '/kubernetes', icon: Box },
   { name: 'Metrics', href: '/metrics', icon: Activity },
   { name: 'Alerts', href: '/alerts', icon: Bell },
   { name: 'Services', href: '/services', icon: HardDrive },

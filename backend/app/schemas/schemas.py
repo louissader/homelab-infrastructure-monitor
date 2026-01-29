@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Optional
 from uuid import UUID
 from pydantic import BaseModel, Field, ConfigDict
 
-from app.models.models import HostStatus, AlertSeverity
+from app.models.models import HostStatus, AlertSeverity, ClusterStatus
 
 
 # ============================================================================
@@ -206,3 +206,170 @@ class WSMessage(BaseModel):
     type: str
     data: Any
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ============================================================================
+# Kubernetes Schemas
+# ============================================================================
+
+class ClusterBase(BaseModel):
+    """Base cluster schema."""
+    name: str = Field(..., min_length=1, max_length=255)
+    api_server_url: Optional[str] = Field(None, max_length=512)
+    kubeconfig_path: Optional[str] = Field(None, max_length=512)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ClusterCreate(ClusterBase):
+    """Schema for creating a new cluster."""
+    pass
+
+
+class ClusterUpdate(BaseModel):
+    """Schema for updating a cluster."""
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    api_server_url: Optional[str] = Field(None, max_length=512)
+    kubeconfig_path: Optional[str] = Field(None, max_length=512)
+    status: Optional[ClusterStatus] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class Cluster(ClusterBase):
+    """Schema for cluster response."""
+    id: UUID
+    status: ClusterStatus
+    version: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    last_sync: Optional[datetime] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict, alias="cluster_metadata")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class ClusterSummary(BaseModel):
+    """Schema for cluster summary in list view."""
+    id: UUID
+    name: str
+    status: ClusterStatus
+    version: Optional[str] = None
+    node_count: int = 0
+    pod_count: int = 0
+    cpu_percent: float = 0
+    memory_percent: float = 0
+    last_sync: Optional[datetime] = None
+
+
+# Kubernetes Resource Schemas
+
+class K8sNodeCondition(BaseModel):
+    """Kubernetes node condition."""
+    type: str
+    status: str
+    reason: Optional[str] = None
+    message: Optional[str] = None
+
+
+class K8sNodeResources(BaseModel):
+    """Kubernetes node resources."""
+    cpu: str
+    memory: str
+    pods: Optional[str] = None
+    storage: Optional[str] = None
+
+
+class K8sNode(BaseModel):
+    """Kubernetes node schema."""
+    name: str
+    status: str  # Ready, NotReady, Unknown
+    role: str  # control-plane, worker
+    conditions: List[K8sNodeCondition] = Field(default_factory=list)
+    capacity: K8sNodeResources
+    allocatable: K8sNodeResources
+    cpu_percent: float = 0
+    memory_percent: float = 0
+    pod_count: int = 0
+    created_at: Optional[datetime] = None
+    labels: Dict[str, str] = Field(default_factory=dict)
+    taints: List[Dict[str, str]] = Field(default_factory=list)
+
+
+class K8sContainerStatus(BaseModel):
+    """Kubernetes container status."""
+    name: str
+    ready: bool
+    restart_count: int = 0
+    state: str  # running, waiting, terminated
+    image: str
+
+
+class K8sPod(BaseModel):
+    """Kubernetes pod schema."""
+    name: str
+    namespace: str
+    status: str  # Running, Pending, Failed, Succeeded, Unknown
+    phase: str
+    ready: bool
+    restart_count: int = 0
+    cpu_percent: float = 0
+    memory_percent: float = 0
+    memory_bytes: int = 0
+    node_name: Optional[str] = None
+    ip: Optional[str] = None
+    created_at: Optional[datetime] = None
+    containers: List[K8sContainerStatus] = Field(default_factory=list)
+    labels: Dict[str, str] = Field(default_factory=dict)
+
+
+class K8sDeployment(BaseModel):
+    """Kubernetes deployment schema."""
+    name: str
+    namespace: str
+    replicas: int
+    ready_replicas: int = 0
+    available_replicas: int = 0
+    updated_replicas: int = 0
+    status: str  # Available, Progressing, Degraded
+    created_at: Optional[datetime] = None
+    labels: Dict[str, str] = Field(default_factory=dict)
+
+
+class K8sService(BaseModel):
+    """Kubernetes service schema."""
+    name: str
+    namespace: str
+    type: str  # ClusterIP, NodePort, LoadBalancer, ExternalName
+    cluster_ip: Optional[str] = None
+    external_ip: Optional[str] = None
+    ports: List[Dict[str, Any]] = Field(default_factory=list)
+    created_at: Optional[datetime] = None
+    labels: Dict[str, str] = Field(default_factory=dict)
+
+
+class K8sEvent(BaseModel):
+    """Kubernetes event schema."""
+    type: str  # Normal, Warning
+    reason: str
+    message: str
+    involved_object: str
+    namespace: str
+    timestamp: datetime
+    count: int = 1
+
+
+class ClusterMetrics(BaseModel):
+    """Cluster-wide metrics summary."""
+    cluster_id: UUID
+    timestamp: datetime
+    total_nodes: int
+    ready_nodes: int
+    total_pods: int
+    running_pods: int
+    total_deployments: int
+    available_deployments: int
+    total_cpu_millicores: int
+    used_cpu_millicores: int
+    cpu_percent: float
+    total_memory_bytes: int
+    used_memory_bytes: int
+    memory_percent: float

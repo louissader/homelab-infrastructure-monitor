@@ -1,5 +1,20 @@
 import axios from 'axios';
-import type { Host, Metric, Alert, AlertRule, PaginatedResponse, HealthResponse } from '@/types';
+import type {
+  Host,
+  Metric,
+  Alert,
+  AlertRule,
+  PaginatedResponse,
+  HealthResponse,
+  Cluster,
+  ClusterSummary,
+  ClusterMetrics,
+  K8sNode,
+  K8sPod,
+  K8sDeployment,
+  K8sService,
+  K8sEvent,
+} from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -99,4 +114,100 @@ export const updateAlertRule = async (id: string, data: Partial<AlertRule>): Pro
 
 export const deleteAlertRule = async (id: string): Promise<void> => {
   await apiClient.delete(`/alerts/rules/${id}`);
+};
+
+// ============================================================================
+// Kubernetes Clusters
+// ============================================================================
+
+export const getClusters = async (): Promise<ClusterSummary[]> => {
+  const response = await apiClient.get('/clusters');
+  return response.data;
+};
+
+export const getCluster = async (id: string): Promise<Cluster> => {
+  const response = await apiClient.get(`/clusters/${id}`);
+  return response.data;
+};
+
+export const createCluster = async (data: {
+  name: string;
+  api_server_url?: string;
+  kubeconfig_path?: string;
+  metadata?: Record<string, unknown>;
+}): Promise<Cluster> => {
+  const response = await apiClient.post('/clusters', data);
+  return response.data;
+};
+
+export const updateCluster = async (id: string, data: Partial<Cluster>): Promise<Cluster> => {
+  const response = await apiClient.put(`/clusters/${id}`, data);
+  return response.data;
+};
+
+export const deleteCluster = async (id: string): Promise<void> => {
+  await apiClient.delete(`/clusters/${id}`);
+};
+
+export const syncCluster = async (id: string): Promise<ClusterMetrics> => {
+  const response = await apiClient.post(`/clusters/${id}/sync`);
+  return response.data;
+};
+
+// Kubernetes Nodes
+export const getClusterNodes = async (clusterId: string): Promise<K8sNode[]> => {
+  const response = await apiClient.get(`/clusters/${clusterId}/nodes`);
+  return response.data;
+};
+
+// Kubernetes Pods
+export const getClusterPods = async (
+  clusterId: string,
+  params?: { namespace?: string; status?: string }
+): Promise<K8sPod[]> => {
+  const response = await apiClient.get(`/clusters/${clusterId}/pods`, { params });
+  return response.data;
+};
+
+// Kubernetes Deployments
+export const getClusterDeployments = async (
+  clusterId: string,
+  namespace?: string
+): Promise<K8sDeployment[]> => {
+  const response = await apiClient.get(`/clusters/${clusterId}/deployments`, {
+    params: namespace ? { namespace } : undefined,
+  });
+  return response.data;
+};
+
+// Kubernetes Services
+export const getClusterServices = async (
+  clusterId: string,
+  namespace?: string
+): Promise<K8sService[]> => {
+  const response = await apiClient.get(`/clusters/${clusterId}/services`, {
+    params: namespace ? { namespace } : undefined,
+  });
+  return response.data;
+};
+
+// Kubernetes Events
+export const getClusterEvents = async (
+  clusterId: string,
+  params?: { namespace?: string; limit?: number }
+): Promise<K8sEvent[]> => {
+  const response = await apiClient.get(`/clusters/${clusterId}/events`, { params });
+  return response.data;
+};
+
+// Kubernetes Metrics
+export const getClusterMetrics = async (clusterId: string): Promise<ClusterMetrics> => {
+  const response = await apiClient.get(`/clusters/${clusterId}/metrics`);
+  return response.data;
+};
+
+// Kubernetes Namespaces
+export const getClusterNamespaces = async (clusterId: string): Promise<string[]> => {
+  const response = await apiClient.get(`/clusters/${clusterId}/namespaces`);
+  return response.data;
 };

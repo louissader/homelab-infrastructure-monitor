@@ -8,6 +8,8 @@ import { Metrics } from '@/pages/Metrics';
 import { Alerts } from '@/pages/Alerts';
 import { Services } from '@/pages/Services';
 import { Settings } from '@/pages/Settings';
+import { Kubernetes } from '@/pages/Kubernetes';
+import { ClusterDetail } from '@/pages/ClusterDetail';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +29,8 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="hosts" element={<Hosts />} />
             <Route path="hosts/:id" element={<HostDetail />} />
+            <Route path="kubernetes" element={<Kubernetes />} />
+            <Route path="kubernetes/:clusterId" element={<ClusterDetail />} />
             <Route path="metrics" element={<Metrics />} />
             <Route path="alerts" element={<Alerts />} />
             <Route path="services" element={<Services />} />

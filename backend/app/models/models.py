@@ -30,6 +30,43 @@ class AlertSeverity(str, enum.Enum):
     CRITICAL = "critical"
 
 
+class ClusterStatus(str, enum.Enum):
+    """Kubernetes cluster status enumeration."""
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    UNREACHABLE = "unreachable"
+    UNKNOWN = "unknown"
+
+
+class Cluster(Base):
+    """Kubernetes cluster table - represents a monitored K8s cluster."""
+
+    __tablename__ = "clusters"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String(255), nullable=False, unique=True)
+    api_server_url = Column(String(512), nullable=True)
+    kubeconfig_path = Column(String(512), nullable=True)  # Path to kubeconfig file or "mock" for mock mode
+    status = Column(Enum(ClusterStatus), default=ClusterStatus.UNKNOWN, nullable=False)
+    version = Column(String(50), nullable=True)  # K8s version
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    last_sync = Column(TIMESTAMP(timezone=True), nullable=True)
+    cluster_metadata = Column(JSONB, default={})  # Labels, annotations, provider info
+
+    # Relationships
+    nodes = relationship("Host", back_populates="cluster")
+
+    # Indexes
+    __table_args__ = (
+        Index('ix_clusters_status', 'status'),
+        Index('ix_clusters_last_sync', 'last_sync'),
+    )
+
+    def __repr__(self):
+        return f"<Cluster(id={self.id}, name='{self.name}', status={self.status})>"
+
+
 class Host(Base):
     """Host table - represents a monitored host."""
 
@@ -45,14 +82,21 @@ class Host(Base):
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
     host_metadata = Column(JSONB, default={})
 
+    # Kubernetes fields
+    cluster_id = Column(UUID(as_uuid=True), ForeignKey("clusters.id", ondelete="SET NULL"), nullable=True)
+    host_type = Column(String(50), default="server")  # "server", "k8s_node"
+
     # Relationships
     metrics = relationship("Metric", back_populates="host", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="host", cascade="all, delete-orphan")
+    cluster = relationship("Cluster", back_populates="nodes")
 
     # Indexes
     __table_args__ = (
         Index('ix_hosts_status', 'status'),
         Index('ix_hosts_last_seen', 'last_seen'),
+        Index('ix_hosts_cluster_id', 'cluster_id'),
+        Index('ix_hosts_host_type', 'host_type'),
     )
 
     def __repr__(self):
