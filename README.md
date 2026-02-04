@@ -9,7 +9,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-20.10+-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-**A production-ready, real-time infrastructure monitoring dashboard for home lab environments**
+**A production-ready, real-time infrastructure monitoring platform for servers, containers, and Kubernetes clusters**
 
 [Features](#-features) • [Tech Stack](#-tech-stack) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [API](#-api-documentation)
 
@@ -19,7 +19,7 @@
 
 ## Overview
 
-HomeLab Infrastructure Monitor is a **full-stack, three-tier web application** that provides comprehensive monitoring for servers, containers, and services. Built to demonstrate real-world DevOps, SysAdmin, and full-stack development skills.
+HomeLab Infrastructure Monitor is a **full-stack, three-tier web application** that provides comprehensive monitoring for servers, containers, Kubernetes clusters, and services. The cross-platform Python agent collects metrics from any machine (Linux, macOS, Windows), and the React dashboard displays everything in real-time via WebSockets. Built to demonstrate real-world DevOps, cloud architecture, and full-stack development skills.
 
 <div align="center">
 <img src="docs/dashboard-preview.png" alt="Dashboard Preview" width="800"/>
@@ -30,12 +30,14 @@ HomeLab Infrastructure Monitor is a **full-stack, three-tier web application** t
 | Feature | Description |
 |---------|-------------|
 | **Real-Time Monitoring** | Live CPU, memory, disk, and network metrics with WebSocket streaming |
+| **Kubernetes Monitoring** | Cluster health, nodes, pods, deployments, services, and events |
 | **Docker Integration** | Container status, resource usage, and health monitoring |
-| **Service Health Checks** | HTTP endpoints, TCP ports, and process monitoring |
+| **Service Health Checks** | HTTP endpoints and TCP port monitoring with response time tracking |
 | **Smart Alerting** | Configurable thresholds with cooldown periods to prevent alert fatigue |
 | **Historical Analytics** | Time-series data storage with trend visualization |
 | **Multi-Host Support** | Monitor unlimited machines from a single dashboard |
-| **RESTful API** | Full API for integration with other tools and automation |
+| **Cross-Platform Agent** | Works on Linux, macOS, and Windows via psutil |
+| **RESTful API** | 20+ endpoints with Swagger/ReDoc documentation |
 
 ---
 
@@ -66,10 +68,11 @@ HomeLab Infrastructure Monitor is a **full-stack, three-tier web application** t
 ### Infrastructure
 | Technology | Purpose |
 |------------|---------|
-| **Docker** | Containerization |
+| **Docker** | Multi-stage containerization |
 | **Docker Compose** | Multi-container orchestration |
-| **Nginx** | Reverse proxy (production) |
-| **psutil** | System metrics collection |
+| **Nginx** | Reverse proxy + static file server |
+| **Kubernetes Client** | K8s cluster monitoring via official Python SDK |
+| **psutil** | Cross-platform system metrics collection |
 
 ---
 
@@ -106,13 +109,13 @@ HomeLab Infrastructure Monitor is a **full-stack, three-tier web application** t
 │                               ▼                                             │
 │  ┌────────────────────────────────────────────────────────────────────┐    │
 │  │                     PostgreSQL Database                             │    │
-│  │   hosts │ metrics │ alerts │ alert_rules │ api_keys                │    │
+│  │   hosts │ metrics │ alerts │ alert_rules │ api_keys │ clusters      │    │
 │  └────────────────────────────────────────────────────────────────────┘    │
 │                               │                                             │
 │                               ▼                                             │
 │  ┌────────────────────────────────────────────────────────────────────┐    │
 │  │                       React Frontend                                │    │
-│  │   Dashboard │ Hosts │ Metrics │ Alerts │ Services │ Settings       │    │
+│  │   Dashboard │ Hosts │ Metrics │ Alerts │ Services │ Kubernetes    │    │
 │  └────────────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -186,7 +189,8 @@ HomeLab Infrastructure Monitor/
 ├── backend/                    # FastAPI backend
 │   ├── app/
 │   │   ├── api/v1/            # REST API endpoints
-│   │   │   └── endpoints/     # metrics, hosts, alerts, websocket
+│   │   │   └── endpoints/     # metrics, hosts, alerts, kubernetes, websocket
+│   │   ├── services/          # Kubernetes service layer
 │   │   ├── core/              # Config, auth, alert engine
 │   │   ├── db/                # Database setup
 │   │   ├── models/            # SQLAlchemy ORM models
@@ -235,9 +239,16 @@ Once the backend is running, interactive documentation is available:
 | `POST` | `/api/v1/metrics` | Ingest metrics (auth required) |
 | `GET` | `/api/v1/metrics/latest` | Get latest metrics per host |
 | `GET` | `/api/v1/hosts` | List all hosts |
-| `POST` | `/api/v1/hosts` | Register new host |
+| `POST` | `/api/v1/hosts` | Register new host (returns API key) |
 | `GET` | `/api/v1/alerts` | List alerts |
 | `POST` | `/api/v1/alerts/{id}/resolve` | Resolve an alert |
+| `POST` | `/api/v1/alerts/rules` | Create alert rule |
+| `GET` | `/api/v1/clusters` | List Kubernetes clusters |
+| `POST` | `/api/v1/clusters` | Register a K8s cluster |
+| `GET` | `/api/v1/clusters/{id}/nodes` | Get cluster nodes |
+| `GET` | `/api/v1/clusters/{id}/pods` | Get cluster pods |
+| `GET` | `/api/v1/clusters/{id}/deployments` | Get cluster deployments |
+| `GET` | `/api/v1/clusters/{id}/metrics` | Get cluster metrics |
 | `WS` | `/api/v1/ws/metrics` | Real-time metrics stream |
 
 ---
@@ -263,22 +274,23 @@ npm run build
 |----------|--------|
 | **Backend Development** | Python, FastAPI, REST APIs, WebSockets, async/await |
 | **Frontend Development** | React, TypeScript, TailwindCSS, data visualization |
-| **Database** | PostgreSQL, SQLAlchemy, database design, migrations |
-| **DevOps** | Docker, Docker Compose, CI/CD, environment management |
-| **System Administration** | Linux, process monitoring, networking, metrics collection |
-| **Security** | API authentication, input validation, secure defaults |
-| **Software Architecture** | Three-tier architecture, event-driven design, caching |
+| **Database** | PostgreSQL, SQLAlchemy ORM, JSONB, database design, migrations |
+| **DevOps** | Docker (multi-stage builds), Docker Compose, environment management |
+| **Kubernetes** | Cluster monitoring, nodes, pods, deployments, services, events |
+| **System Administration** | Cross-platform metrics collection, networking, process monitoring |
+| **Security** | SHA-256 hashed API keys, Pydantic validation, CORS, parameterized queries |
+| **Software Architecture** | Three-tier architecture, adapter pattern, event-driven design, caching |
 
 ---
 
 ## Future Enhancements
 
-- [ ] Kubernetes cluster monitoring
+- [x] Kubernetes cluster monitoring
+- [ ] Terraform IaC deployment to AWS (EC2, RDS, S3, CloudFront)
 - [ ] Log aggregation with Elasticsearch
 - [ ] Prometheus metrics export
 - [ ] Slack/Discord alert notifications
 - [ ] Custom dashboard builder
-- [ ] Machine learning anomaly detection
 
 ---
 

@@ -2,7 +2,7 @@ export interface Host {
   id: string;
   hostname: string;
   ip_address: string;
-  status: 'online' | 'offline' | 'warning';
+  status: 'online' | 'offline' | 'warning' | 'healthy' | 'critical' | 'unknown';
   last_seen: string;
   created_at: string;
   metadata: Record<string, unknown>;

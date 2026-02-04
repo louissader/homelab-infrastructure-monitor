@@ -32,8 +32,9 @@ async def ingest_metrics(
     Requires agent API key authentication.
     """
     try:
-        # Update host's last_seen timestamp
+        # Update host's last_seen timestamp and status
         current_host.last_seen = datetime.utcnow()
+        current_host.status = "HEALTHY"
 
         # Store different metric types
         metric_types = {
@@ -186,7 +187,7 @@ async def get_latest_metrics(
     try:
         # Query to get latest metrics per host and metric type
         # This is a simplified version - in production, you'd use window functions
-        query = select(Host).where(Host.status != "unknown")
+        query = select(Host)
         result = await db.execute(query)
         hosts = result.scalars().all()
 

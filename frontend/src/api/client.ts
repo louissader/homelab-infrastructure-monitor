@@ -34,7 +34,11 @@ export const getHealth = async (): Promise<HealthResponse> => {
 // Hosts
 export const getHosts = async (page = 1, size = 50): Promise<PaginatedResponse<Host>> => {
   const response = await apiClient.get('/hosts', { params: { page, size } });
-  return response.data;
+  const data = response.data;
+  if (Array.isArray(data)) {
+    return { items: data, total: data.length, page: 1, size: data.length, pages: 1 };
+  }
+  return data;
 };
 
 export const getHost = async (id: string): Promise<Host> => {
@@ -69,9 +73,120 @@ export const getMetrics = async (params: {
   return response.data;
 };
 
-export const getLatestMetrics = async (): Promise<Record<string, Metric>> => {
+export const getLatestMetrics = async (): Promise<Record<string, any>> => {
   const response = await apiClient.get('/metrics/latest');
-  return response.data;
+  const data = response.data;
+
+  const entries = Array.isArray(data) ? data : Object.values(data);
+  const result: Record<string, any> = {};
+
+  for (const entry of entries) {
+    const hostId = entry.host_id;
+    const metrics = entry.metrics || [];
+
+    // Transform separate metric entries into a single metric_data object
+    // that matches the MetricData interface the frontend components expect
+    const metric_data: Record<string, any> = {};
+
+    for (const m of metrics) {
+      switch (m.type) {
+        case 'cpu': {
+          const cpuData = m.data;
+          const percentArray = cpuData.percent || [];
+          // Agent sends per-cpu array; frontend expects a single average percent
+          const avgPercent = Array.isArray(percentArray)
+            ? percentArray.reduce((a: number, b: number) => a + b, 0) / (percentArray.length || 1)
+            : percentArray;
+          const loadAvg = cpuData.load_avg || [0, 0, 0];
+          metric_data.cpu = {
+            percent: avgPercent,
+            per_cpu: Array.isArray(percentArray) ? percentArray : [percentArray],
+            load_avg: Array.isArray(loadAvg)
+              ? { '1min': loadAvg[0], '5min': loadAvg[1], '15min': loadAvg[2] }
+              : loadAvg,
+          };
+          break;
+        }
+        case 'memory':
+          metric_data.memory = m.data;
+          break;
+        case 'disks': {
+          // Agent sends [{mount, total, used, free, percent}, ...]
+          // Frontend DiskMetric expects partitions: [{device, mountpoint, total, used, free, percent}]
+          const partitions = (Array.isArray(m.data) ? m.data : []).map((d: any) => ({
+            device: d.device || d.mount || '',
+            mountpoint: d.mount || d.mountpoint || '',
+            total: d.total || 0,
+            used: d.used || 0,
+            free: d.free || 0,
+            percent: d.percent || 0,
+          }));
+          metric_data.disk = { ...metric_data.disk, partitions };
+          break;
+        }
+        case 'disk_io': {
+          // Agent sends read_bytes_per_sec/write_bytes_per_sec
+          // Frontend expects read_rate/write_rate
+          metric_data.disk = {
+            ...metric_data.disk,
+            read_bytes: m.data.read_bytes || 0,
+            write_bytes: m.data.write_bytes || 0,
+            read_rate: m.data.read_bytes_per_sec || 0,
+            write_rate: m.data.write_bytes_per_sec || 0,
+          };
+          break;
+        }
+        case 'network': {
+          // Agent sends bytes_sent_per_sec/bytes_recv_per_sec
+          // Frontend expects send_rate/recv_rate
+          metric_data.network = {
+            bytes_sent: m.data.bytes_sent || 0,
+            bytes_recv: m.data.bytes_recv || 0,
+            send_rate: m.data.bytes_sent_per_sec || 0,
+            recv_rate: m.data.bytes_recv_per_sec || 0,
+            interfaces: [],
+          };
+          break;
+        }
+        case 'containers': {
+          // Stored as {containers: [...]}; frontend expects docker: DockerMetric[]
+          const containers = m.data.containers || [];
+          metric_data.docker = containers.map((c: any) => ({
+            container_id: c.id || '',
+            name: c.name || '',
+            status: c.status || '',
+            cpu_percent: c.cpu_percent || 0,
+            memory_usage: c.memory_usage || 0,
+            memory_limit: c.memory_limit || 0,
+            memory_percent: c.memory_percent || 0,
+          }));
+          break;
+        }
+        case 'health_checks': {
+          // Stored as {checks: [...]} with healthy boolean
+          // Frontend expects services: ServiceMetric[] with status string
+          const checks = m.data.checks || [];
+          metric_data.services = checks.map((c: any) => ({
+            name: c.name || '',
+            type: c.type || '',
+            status: c.healthy ? 'healthy' : 'unhealthy',
+            response_time: c.response_time_ms,
+            message: c.message,
+          }));
+          break;
+        }
+      }
+    }
+
+    result[hostId] = {
+      host_id: hostId,
+      metric_type: 'combined',
+      metric_data,
+      timestamp: entry.last_seen,
+    };
+  }
+
+  return result;
 };
 
 // Alerts
@@ -83,7 +198,11 @@ export const getAlerts = async (params: {
   size?: number;
 }): Promise<PaginatedResponse<Alert>> => {
   const response = await apiClient.get('/alerts', { params });
-  return response.data;
+  const data = response.data;
+  if (Array.isArray(data)) {
+    return { items: data, total: data.length, page: 1, size: data.length, pages: 1 };
+  }
+  return data;
 };
 
 export const acknowledgeAlert = async (id: string): Promise<Alert> => {

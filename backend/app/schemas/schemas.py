@@ -61,7 +61,7 @@ class MetricBase(BaseModel):
     """Base metric schema."""
     timestamp: datetime
     metric_type: str = Field(..., min_length=1, max_length=50)
-    metric_data: Dict[str, Any]
+    metric_data: Any
 
 
 class MetricCreate(MetricBase):

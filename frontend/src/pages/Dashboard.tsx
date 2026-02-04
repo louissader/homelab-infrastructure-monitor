@@ -27,8 +27,8 @@ export function Dashboard() {
   const hosts = hostsData?.items ?? [];
   const alerts = alertsData?.items ?? [];
 
-  const onlineHosts = hosts.filter((h) => h.status === 'online').length;
-  const offlineHosts = hosts.filter((h) => h.status === 'offline').length;
+  const onlineHosts = hosts.filter((h) => h.status === 'healthy' || h.status === 'online').length;
+  const offlineHosts = hosts.filter((h) => h.status === 'offline' || h.status === 'critical').length;
   const criticalAlerts = alerts.filter((a) => a.severity === 'critical' && !a.resolved).length;
 
   if (hostsLoading) {

@@ -27,12 +27,12 @@ export function Services() {
   hosts.forEach((host) => {
     const metric = latestMetrics?.[host.id];
     if (metric?.metric_data.services) {
-      metric.metric_data.services.forEach((service) => {
+      metric.metric_data.services.forEach((service: any) => {
         allServices.push({ hostName: host.hostname, service });
       });
     }
     if (metric?.metric_data.docker) {
-      metric.metric_data.docker.forEach((container) => {
+      metric.metric_data.docker.forEach((container: any) => {
         allContainers.push({ hostName: host.hostname, container });
       });
     }

@@ -20,7 +20,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { PodList } from '@/components/PodList';
 import { Spinner } from '@/components/ui/Spinner';
-import { formatRelativeTime, formatBytes, cn } from '@/lib/utils';
+import { formatRelativeTime, cn } from '@/lib/utils';
 import {
   useCluster,
   useClusterNodes,
